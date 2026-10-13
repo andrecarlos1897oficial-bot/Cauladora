@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora iOS</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .calculator {
+            width: 340px;
+            background-color: #000;
+            padding: 20px;
+            border-radius: 40px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Visor duplo permanente */
+        .display {
+            color: #fff;
+            padding: 20px 10px;
+            margin-bottom: 10px;
+            min-height: 140px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            justify-content: flex-end;
+            word-break: break-all;
+        }
+
+        /* Linha superior: Mostra a conta realizada (ex: 12 + 8 =) */
+        .expression-line {
+            color: #888;
+            font-size: 1.6rem;
+            font-weight: 300;
+            min-height: 35px;
+            margin-bottom: 4px;
+            transition: all 0.2s ease;
+        }
+
+        /* Linha principal: Mostra o número digitado ou o resultado final */
+        .result-line {
+            color: #fff;
+            font-size: 4rem;
+            font-weight: 300;
+            line-height: 1.1;
+            transition: transform 0.15s ease;
+        }
+
+        /* Animação quando o resultado é exibido */
+        .pop-animation {
+            animation: pop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes pop {
+            0% { transform: scale(0.92); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Teclado iOS */
+        .buttons-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+        }
+
+        button {
+            border: none;
+            outline: none;
+            height: 72px;
+            border-radius: 36px;
+            font-size: 1.8rem;
+            font-weight: 400;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: filter 0.15s ease, transform 0.08s ease;
+        }
+
+        button:active {
+            filter: brightness(135%);
+            transform: scale(0.95);
+        }
+
+        .btn-gray {
+            background-color: #a5a5a5;
+            color: #000;
+        }
+
+        .btn-dark-gray {
+            background-color: #333333;
+            color: #fff;
+        }
+
+        .btn-orange {
+            background-color: #ff9f0a;
+            color: #fff;
+            font-size: 2.2rem;
+        }
+
+        .btn-zero {
+            grid-column: span 2;
+            border-radius: 36px;
+            justify-content: flex-start;
+            padding-left: 28px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="calculator">
+        <div class="display">
+            <!-- Conta no topo -->
+            <div class="expression-line" id="expressionLine"></div>
+            <!-- Resultado em destaque -->
+            <div class="result-line" id="resultLine">0</div>
+        </div>
+
+        <div class="buttons-grid">
+            <button class="btn-gray" onclick="clearAll()">AC</button>
+            <button class="btn-gray" onclick="toggleSign()">+/−</button>
+            <button class="btn-gray" onclick="applyPercent()">%</button>
+            <button class="btn-orange" onclick="setOp('/', '÷')">÷</button>
+
+            <button class="btn-dark-gray" onclick="appendNum('7')">7</button>
+            <button class="btn-dark-gray" onclick="appendNum('8')">8</button>
+            <button class="btn-dark-gray" onclick="appendNum('9')">9</button>
+            <button class="btn-orange" onclick="setOp('*', '×')">×</button>
+
+            <button class="btn-dark-gray" onclick="appendNum('4')">4</button>
+            <button class="btn-dark-gray" onclick="appendNum('5')">5</button>
+            <button class="btn-dark-gray" onclick="appendNum('6')">6</button>
+            <button class="btn-orange" onclick="setOp('-', '−')">−</button>
+
+            <button class="btn-dark-gray" onclick="appendNum('1')">1</button>
+            <button class="btn-dark-gray" onclick="appendNum('2')">2</button>
+            <button class="btn-dark-gray" onclick="appendNum('3')">3</button>
+            <button class="btn-orange" onclick="setOp('+', '+')">+</button>
+
+            <button class="btn-dark-gray btn-zero" onclick="appendNum('0')">0</button>
+            <button class="btn-dark-gray" onclick="appendNum('.')">.</button>
+            <button class="btn-orange" onclick="calculate()">=</button>
+        </div>
+    </div>
+
+    <script>
+        let currentNum = '0';
+        let previousNum = null;
+        let activeOp = null;
+        let opSymbol = '';
+        let isCalculated = false;
+
+        const resultLine = document.getElementById('resultLine');
+        const expressionLine = document.getElementById('expressionLine');
+
+        function appendNum(num) {
+            if (isCalculated) {
+                currentNum = num === '.' ? '0.' : num;
+                previousNum = null;
+                activeOp = null;
+                isCalculated = false;
+                expressionLine.innerText = '';
+            } else {
+                if (num === '.' && currentNum.includes('.')) return;
+                if (currentNum === '0' && num !== '.') {
+                    currentNum = num;
+                } else {
+                    currentNum += num;
+                }
+            }
+            
+            // Atualiza o topo se já houver operador selecionado
+            if (activeOp !== null && !isCalculated) {
+                expressionLine.innerText = `${previousNum} ${opSymbol} ${currentNum}`;
+            }
+            
+            resultLine.innerText = currentNum;
+        }
+
+        function setOp(op, symbol) {
+            if (activeOp !== null && !isCalculated && currentNum !== '0') {
+                calculate(false);
+            }
+            previousNum = currentNum;
+            activeOp = op;
+            opSymbol = symbol;
+            
+            // Exibe o primeiro número + o operador na linha da conta
+            expressionLine.innerText = `${previousNum} ${opSymbol}`;
+            currentNum = '0';
+            isCalculated = false;
+        }
+
+        function calculate(showEquals = true) {
+            if (previousNum === null || activeOp === null) return;
+
+            const n1 = parseFloat(previousNum);
+            const n2 = parseFloat(currentNum);
+            let res = 0;
+
+            switch (activeOp) {
+                case '+': res = n1 + n2; break;
+                case '-': res = n1 - n2; break;
+                case '*': res = n1 * n2; break;
+                case '/': res = n2 !== 0 ? n1 / n2 : 'Erro'; break;
+            }
+
+            // Exibe a conta completa no topo (ex: 25 × 4 =)
+            if (showEquals) {
+                expressionLine.innerText = `${previousNum} ${opSymbol} ${currentNum} =`;
+            }
+
+            // Formata o resultado
+            currentNum = typeof res === 'number' ? Number(res.toFixed(8)).toString() : res;
+
+            // Animação de resultado
+            resultLine.classList.remove('pop-animation');
+            void resultLine.offsetWidth;
+            resultLine.classList.add('pop-animation');
+
+            resultLine.innerText = currentNum;
+            isCalculated = true;
+        }
+
+        function clearAll() {
+            currentNum = '0';
+            previousNum = null;
+            activeOp = null;
+            opSymbol = '';
+            isCalculated = false;
+            expressionLine.innerText = '';
+            resultLine.innerText = '0';
+        }
+
+        function toggleSign() {
+            if (currentNum === '0') return;
+            currentNum = (parseFloat(currentNum) * -1).toString();
+            resultLine.innerText = currentNum;
+        }
+
+        function applyPercent() {
+            if (currentNum === '0') return;
+            currentNum = (parseFloat(currentNum) / 100).toString();
+            resultLine.innerText = currentNum;
+        }
+    </script>
+
+</body>
+</html>
